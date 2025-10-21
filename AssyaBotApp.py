@@ -8,7 +8,7 @@ import base64
 st.set_page_config(
     page_title="AssyaBot AI",
     page_icon="🧠💻",
-    layout="wide",  # Changed layout so image fits nicely
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -72,7 +72,7 @@ st.sidebar.image("CartoonBrain.png", width=250)
 st.sidebar.markdown("<h2 style='text-align:center;'>🧠 AssyaBot AI</h2>", unsafe_allow_html=True)
 st.sidebar.write("""
 💡 *Your futuristic AI educational assistant*  
-🎯 Learn, experiment, and explore AI 
+🎯 Learn, experiment, and explore AI  
 🌟 Mind + tech powered
 """)
 
@@ -88,17 +88,22 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # -----------------------
-# User input
+# Chat input area (clean version)
 # -----------------------
-user_input = st.text_input("Ask me anything!")
+with st.form(key="chat_form", clear_on_submit=True):
+    col1, col2 = st.columns([9, 1])  # Input (wide) + Send button (small)
+    with col1:
+        user_input = st.text_input("Ask me anything...", label_visibility="collapsed")
+    with col2:
+        submitted = st.form_submit_button("➤")
 
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    answer = ask_openai(user_input)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    if submitted and user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        answer = ask_openai(user_input)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 # -----------------------
-# Display chat
+# Display chat history
 # -----------------------
 for msg in st.session_state.messages:
     if msg["role"] == "user":
