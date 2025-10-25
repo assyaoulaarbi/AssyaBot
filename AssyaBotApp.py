@@ -1,6 +1,9 @@
 import streamlit as st
 from openai_helper import ask_openai  # your function
 import base64
+from openai import OpenAI
+import time
+
 
 # -----------------------
 # Page configuration
@@ -79,7 +82,7 @@ st.sidebar.write("""
 # -----------------------
 # Header
 # -----------------------
-st.markdown("<h1>AssyaBot AI 🤖🧠</h1>", unsafe_allow_html=True)
+st.markdown("<h1>AssyaBot AI 🤖</h1>", unsafe_allow_html=True)
 
 # -----------------------
 # Initialize messages
@@ -88,25 +91,75 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # -----------------------
-# Chat input area (clean version)
+# Chat input (Enter to send, auto-clear, no button)
 # -----------------------
-with st.form(key="chat_form", clear_on_submit=True):
-    col1, col2 = st.columns([9, 1])  # Input (wide) + Send button (small)
-    with col1:
-        user_input = st.text_input("Ask me anything...", label_visibility="collapsed")
-    with col2:
-        submitted = st.form_submit_button("➤")
 
-    if submitted and user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        answer = ask_openai(user_input)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+# one-time state init
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "submitted_text" not in st.session_state:
+    st.session_state.submitted_text = ""
+
+st.markdown("""
+<style>
+.label-small { color:white; font-size:14px; margin-bottom:-6px; }
+.input-field { width:100%; max-width:900px; height:48px; padding:10px 14px;
+  border-radius:10px; border:1px solid #ccc; background:rgba(255,255,255,0.9);
+  font-size:16px; color:black; margin:auto; }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<p class='label-small'>Ask me anything...</p>", unsafe_allow_html=True)
+
+# --- 1) callback that fires on Enter ---
+def _submit():
+    # copy the text for processing, then clear the input safely
+    st.session_state.submitted_text = st.session_state.user_input
+    st.session_state.user_input = ""   # safe here (inside on_change)
+    # optional: rerun right away so the cleared UI shows instantly
+    # st.rerun()
+
+# --- 2) the input widget ---
+st.text_input(
+    "",
+    key="user_input",
+    label_visibility="collapsed",
+    on_change=_submit
+)
+
+# --- 3) if something was submitted, process it ---
+if st.session_state.submitted_text:
+    user_input = st.session_state.submitted_text
+    st.session_state.submitted_text = ""   # consume it
+
+    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    # Thinking animation (white & minimal)
+    placeholder = st.empty()
+    placeholder.markdown("""
+    <div style="text-align:center; font-size:18px; color:white;">
+        💭 Thinking<span class="dots"></span>
+    </div>
+    <style>
+    @keyframes blink { 0%{opacity:.2} 20%{opacity:1} 100%{opacity:.2} }
+    .dots::after { content:'...'; animation: blink 1.5s infinite; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Call your model
+    answer = ask_openai(user_input)
+
+    placeholder.empty()
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+
 
 # -----------------------
 # Display chat history
 # -----------------------
-for msg in st.session_state.messages:
+for msg in reversed(st.session_state.messages):
     if msg["role"] == "user":
         st.markdown(f"<div class='user'>{msg['content']}</div>", unsafe_allow_html=True)
     else:
         st.markdown(f"<div class='bot'>{msg['content']}</div>", unsafe_allow_html=True)
+
