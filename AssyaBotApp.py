@@ -80,6 +80,30 @@ st.sidebar.write("""
 """)
 
 # -----------------------
+# Developer Mode Access (Hidden from users)
+# -----------------------
+DEV_PASSWORD = "25v5mrd4ypyFW"   # <--- CHANGE THIS PASSWORD
+
+if "dev_unlocked" not in st.session_state:
+    st.session_state.dev_unlocked = False
+
+if not st.session_state.dev_unlocked:
+    dev_pass = st.sidebar.text_input(" ", placeholder="🔒 Developer login", type="password")
+    if dev_pass == DEV_PASSWORD:
+        st.session_state.dev_unlocked = True
+        st.sidebar.success("🟣 Developer Mode Enabled")
+else:
+    st.sidebar.success("🟣 Developer Mode Active")
+
+    # Reset demo limit button (ONLY visible to you)
+    if st.sidebar.button("🔄 Reset My Demo Limit"):
+        st.session_state.question_count = 0
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "✅ Limit reset! You can chat again 💬"
+        })
+
+# -----------------------
 # Header
 # -----------------------
 st.markdown("<h1>AssyaBot AI 🤖</h1>", unsafe_allow_html=True)
@@ -91,35 +115,38 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # -----------------------
-# Chat input (Enter to send, auto-clear, no button)
+# Chat input (Enter to send, auto-clear, no button, demo limit)
 # -----------------------
 
-# one-time state init
+# One-time session state init
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "submitted_text" not in st.session_state:
     st.session_state.submitted_text = ""
+if "question_count" not in st.session_state:
+    st.session_state.question_count = 0
 
+# Style
 st.markdown("""
 <style>
 .label-small { color:white; font-size:14px; margin-bottom:-6px; }
-.input-field { width:100%; max-width:900px; height:48px; padding:10px 14px;
-  border-radius:10px; border:1px solid #ccc; background:rgba(255,255,255,0.9);
-  font-size:16px; color:black; margin:auto; }
+.input-field {
+    width:100%; max-width:900px; height:48px; padding:10px 14px;
+    border-radius:10px; border:1px solid #ccc;
+    background:rgba(255,255,255,0.9); font-size:16px; color:black; margin:auto;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# Label
 st.markdown("<p class='label-small'>Ask me anything...</p>", unsafe_allow_html=True)
 
-# --- 1) callback that fires on Enter ---
+# --- Input callback (triggered when Enter is pressed) ---
 def _submit():
-    # copy the text for processing, then clear the input safely
     st.session_state.submitted_text = st.session_state.user_input
-    st.session_state.user_input = ""   # safe here (inside on_change)
-    # optional: rerun right away so the cleared UI shows instantly
-    # st.rerun()
+    st.session_state.user_input = ""   # safely clear the input field
 
-# --- 2) the input widget ---
+# Text input box
 st.text_input(
     "",
     key="user_input",
@@ -127,14 +154,14 @@ st.text_input(
     on_change=_submit
 )
 
-# --- 3) if something was submitted, process it ---
+# --- Process submitted message ---
 if st.session_state.submitted_text:
     user_input = st.session_state.submitted_text
-    st.session_state.submitted_text = ""   # consume it
+    st.session_state.submitted_text = ""  # consume stored message
 
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Thinking animation (white & minimal)
+    # Show thinking animation
     placeholder = st.empty()
     placeholder.markdown("""
     <div style="text-align:center; font-size:18px; color:white;">
@@ -146,11 +173,25 @@ if st.session_state.submitted_text:
     </style>
     """, unsafe_allow_html=True)
 
-    # Call your model
-    answer = ask_openai(user_input)
+    # -----------------------
+    # FREE DEMO LIMIT (3 messages)
+    # -----------------------
+    if st.session_state.question_count >= 3:
+        placeholder.empty()
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "✨ Your demo limit has ended.\n\nYou used your 3 free messages 😊\n\nIf you'd like full access to AssyaBot AI:\n👉 Send me a message on LinkedIn 💼💗"
+        })
+    else:
+        st.session_state.question_count += 1  # count usage
 
-    placeholder.empty()
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        # Get AI response
+        answer = ask_openai(user_input)
+
+        placeholder.empty()
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+
 
 
 
