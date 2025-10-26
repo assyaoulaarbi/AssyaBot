@@ -82,7 +82,8 @@ st.sidebar.write("""
 # -----------------------
 # Developer Mode Access (Hidden from users)
 # -----------------------
-DEV_PASSWORD = "25v5mrd4ypyFW"   # <--- CHANGE THIS PASSWORD
+DEV_PASSWORD = st.secrets["DEV_PASSWORD"]
+ 
 
 if "dev_unlocked" not in st.session_state:
     st.session_state.dev_unlocked = False
